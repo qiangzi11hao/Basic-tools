@@ -3,7 +3,7 @@
 
  class CNN(object):
     """
-    A sample CNN for class
+    A sample CNN for classification
     Uses an embedding layer, followed by a convolutional, max-pooling and softmax layer.
     """
     def __init__(self, sequence_length, num_classes, vocab_size,
