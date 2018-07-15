@@ -12,7 +12,7 @@ def Mask(inputs, seq_len, mode='mul'):
     else:
         mask = tf.cast(tf.sequence_mask(seq_len), tf.float32)
         for _ in range(len(inputs.shape)-2):
-            mask = tf.expand_dims(mask, 2)  # 保持首尾
+            mask = tf.expand_dims(mask, 2)  # 保持[batch_size, seq_len,...]与前两维对应,后面的所有都进行mask
         if mode == 'mul':
             return inputs*mask
         if mode == 'add':
@@ -28,17 +28,17 @@ def Dense(inputs, output_size, bias=True, seq_len=None):
         b = 0
 
     outputs = tf.matmul(tf.reshape(inputs, (-1, input_size)), W) + b
-    outputs = tf.reshape(outputs, tf.concat([tf.shape(inputs)[:-1], [output_size]], 0))
+    outputs = tf.reshape(outputs, tf.concat([tf.shape(inputs)[:-1], [output_size]], 0))   #[batch_size,...,input_size] ==> [bath_size,..., outputs_size]
 
     if seq_len:
-        outputs  = Mask(outputs, seq_lenm, 'mul')
+        outputs  = Mask(outputs, seq_len, 'mul')
 
     return outputs
 
-def Attention(Q, K, V, head_num, head_size, Q_len=None, V_len=None):
+def Multi_head_attention(Q, K, V, head_num, head_size, Q_len=None, V_len=None):
     Q = Dense(Q, head_num * head_size, False)
     Q = tf.reshape(Q, (-1, tf.shape(Q)[1], head_num, head_size))
-    Q = tf.transpose(Q, [0, 2, 1, 3])
+    Q = tf.transpose(Q, [0, 2, 1, 3])   #[batch_size, head_num, seq_len, head_size]
     K = Dense(K, head_num * head_size, False)
     K = tf.reshape(K, (-1, tf.shape(K)[1], head_num, head_size))
     K = tf.transpose(K, [0, 2, 1, 3])
@@ -46,13 +46,13 @@ def Attention(Q, K, V, head_num, head_size, Q_len=None, V_len=None):
     V = tf.reshape(V, (-1, tf.shape(K)[1], head_num, head_size))
     V = tf.transpose(V, [0, 2, 1, 3])
 
-    A = tf.matmul(Q, K, transpose_b=True) / tf.sqrt(float(head_size))
+    A = tf.matmul(Q, K, transpose_b=True) / tf.sqrt(float(head_size))  #[batch_size, head_num, seq_len, seq_len]
     A = tf.transpose(A, [0, 3, 2, 1])
     A = Mask(A, V_len, mode='add')
     A = tf.transpose(A, [0, 3, 2, 1])
     A = tf.nn.softmax(A)
 
-    outputs = tf.matmul(A, V)
+    outputs = tf.matmul(A, V)           #[batch_size, head_num, seq_len, head_size]
     outputs = tf.transpose(outputs, [0, 2, 1, 3])
     outputs = tf.reshape(outputs, (-1, tf.shape(outputs)[1], head_num * head_size))
     outputs = Mask(outputs, Q_len, 'mul')
