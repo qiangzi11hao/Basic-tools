@@ -1,6 +1,30 @@
 import tensorflow as tf
 
 
+def bilstm(x, hidden_size):
+    """
+    :param x: [batch, height, width]   / [batch, step, embedding_size]
+    :param hidden_size: lstm隐藏层节点个数
+    :return: [batch, height, 2*hidden_size]  / [batch, step, 2*hidden_size]
+    """
+
+    input_x = tf.transpose(x, [1, 0, 2])
+    input_x = tf.unpack(input_x)
+
+    lstm_fw_cell = rnn_cell.BasicLSTMCell(hidden_size, forget_bias=1.0, state_is_tuple=True)
+    lstm_bw_cell = rnn_cell.BasicLSTMCell(hidden_size, forget_bias=1.0, state_is_tuple=True)
+    try:
+        outputs, _, _ = rnn.static_bidirectional_rnn(lstm_fw_cell, lstm_bw_cell, x,
+                                                     dtype=tf.float32)
+    except Exception:  # Old TensorFlow version only returns outputs not states
+        outputs = rnn.static_bidirectional_rnn(lstm_fw_cell, lstm_bw_cell, x,
+                                               dtype=tf.float32)
+
+    output = tf.pack(output)
+    output = tf.tanspose(output, [1, 0, 2])
+
+    return output
+
 class BILSTM(object):
     def __init__(self, hidden_size, steps, num_words,num_layers=1, dropout=0, embedding_dim=100,
                  is_training=False, embedding_matrix=None, final_unit=False):
