@@ -11,16 +11,16 @@ def bilstm(x, hidden_size):
     input_x = tf.transpose(x, [1, 0, 2])
     input_x = tf.unpack(input_x)
 
-    lstm_fw_cell = rnn_cell.BasicLSTMCell(hidden_size, forget_bias=1.0, state_is_tuple=True)
-    lstm_bw_cell = rnn_cell.BasicLSTMCell(hidden_size, forget_bias=1.0, state_is_tuple=True)
+    lstm_fw_cell = tf.nn.rnn_cell.BasicLSTMCell(hidden_size, forget_bias=1.0, state_is_tuple=True)
+    lstm_bw_cell = tf.nn.rnn_cell.BasicLSTMCell(hidden_size, forget_bias=1.0, state_is_tuple=True)
     try:
-        outputs, _, _ = rnn.static_bidirectional_rnn(lstm_fw_cell, lstm_bw_cell, x,
+        outputs, _, _ = tf.nn.static_bidirectional_rnn(lstm_fw_cell, lstm_bw_cell, x,
                                                      dtype=tf.float32)
     except Exception:  # Old TensorFlow version only returns outputs not states
-        outputs = rnn.static_bidirectional_rnn(lstm_fw_cell, lstm_bw_cell, x,
+        outputs = tf.nn.static_bidirectional_rnn(lstm_fw_cell, lstm_bw_cell, x,
                                                dtype=tf.float32)
 
-    output = tf.pack(output)
+    output = tf.pack(outputs)
     output = tf.tanspose(output, [1, 0, 2])
 
     return output

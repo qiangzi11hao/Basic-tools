@@ -1,4 +1,4 @@
-import tensorflow  as tf
+import tensorflow as tf
 
 def Mask(inputs, seq_len, mode='mul'):
     '''
@@ -34,6 +34,7 @@ def Dense(inputs, output_size, bias=True, seq_len=None):
         outputs  = Mask(outputs, seq_len, 'mul')
 
     return outputs
+
 
 def Multi_head_attention(Q, K, V, head_num, head_size, Q_len=None, V_len=None):
     Q = Dense(Q, head_num * head_size, False)
