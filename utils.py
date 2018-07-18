@@ -133,6 +133,7 @@ def get_door_output(input, input_door, change_input, door_w, max_seq):
 
 def get_rnn2cnn_out(input_q, input_a, door_w, change_w, max_seq):
     embedding_dim = tf.shape(input_q)[2]
+    # input_q, input_a = get_feature_mask(input_q, input_a, q_len, a_len, max_seq)
     input_q_door = tf.reshape(input_q, [-1, embedding_dim])
     input_a_door = tf.reshape(input_a, [-1, embedding_dim])
     change_out_q = tf.reshape(tf.tanh(tf.matmul(input_q_door, change_w['c_w']) + change_w['c_b']), [-1, max_seq, embedding_dim])
@@ -148,7 +149,7 @@ def get_rnn2cnn_out_hxh(input_q_emb, input_q, input_a_emb, input_a, door_w, chan
     input_q_door = tf.reshape(input_q, [-1, embedding_dim])
     input_q_emb_door = tf.reshape(input_q_emb, [-1, tf.shape(input_q_emb)[-1]])
     input_a_door = tf.reshape(input_a, [-1, embedding_dim])
-    input_a_emb_door  = tf.reshape(input_a_emb, [-1, tf.shape(input_a_emb)[-1]])
+    input_a_emb_door = tf.reshape(input_a_emb, [-1, tf.shape(input_a_emb)[-1]])
     change_out_q = tf.reshape(tf.tanh(tf.matmul(input_q_door, change_w['c_w']) + change_w['c_b']), [-1, max_seq, embedding_dim])
     change_out_a = tf.reshape(tf.tanh(tf.matmul(input_a_door, change_w['c_w']) + change_w['c_b']), [-1, max_seq, embedding_dim])
     door_out_q = get_door_output(input_q, input_q_emb_door, change_out_q, door_w, max_seq)
