@@ -189,7 +189,6 @@ class LSTM_QA(object):
             _, neg_a_highway = get_rnn2cnn_out_hxh(ori_que, ori_q_concat, neg_que, neg_a_concat, door_w, change_w, self.steps)
             test_q_highway, test_a_highway = get_rnn2cnn_out(test_que, test_q_concat, test_ans, test_a_concat, door_w, change_w, self.steps)
 
-
             if self.att:
                 ori_q_fea = get_feature_att(ori_q_highway, self_att, self.ori_q_len, self.steps)
                 cand_a_fea = get_feature_att(cand_a_concat, self_att, self.cand_a_len, self.steps)
@@ -205,4 +204,69 @@ class LSTM_QA(object):
                 _, neg_a_fea = get_feature(ori_q_highway, neg_a_highway)
                 test_q_fea, test_a_fea = get_feature(test_q_highway, test_a_highway)
                 self.ori_q_fea = tf.reshape(ori_q_fea, [-1, 300], name='ori_q_feature')
+
+        if self.mode_choice == 6:
+            ori_q_concat = tf.concat([ori_q, ori_que], 2)
+            cand_a_concat = tf.concat([cand_a, cand_que], 2)
+            neg_a_concat = tf.concat([neg_a, neg_que], 2)
+            test_q_concat = tf.concat([test_q, test_que], 2)
+            test_a_concat = tf.concat([test_a, test_ans], 2)
+
+            print(ori_q_concat.shape)
+            ori_q_highway, cand_a_highway = get_rnn2cnn_out_hxh(ori_que, ori_q_concat, cand_que, cand_a_concat, door_w,
+                                                                change_w, self.steps)
+            print(ori_q_highway)
+            _, neg_a_highway = get_rnn2cnn_out_hxh(ori_que, ori_q_concat, neg_que, neg_a_concat, door_w,
+                                                   change_w, self.steps)
+            test_q_highway, test_a_highway = get_rnn2cnn_out(test_que, test_q_concat, test_ans, test_a_concat, door_w,
+                                                             change_w, self.steps)
+
+            ori_q_list, cand_a_list, neg_a_list, test_q_list, test_a_list = [], [], [], [], []
+
+            for i in range(self.steps - self.rnn_windows + 1):
+                ori_q_slice = tf.slice(ori_q_highway, [0, i, 0], [-1, self.rnn_windows, 300])
+                cand_a_slice = tf.slice(cand_a_highway, [0, i, 0], [-1, self.rnn_windows, 300])
+                neg_a_slice = tf.slice(neg_a_highway, [0, i, 0], [-1, self.rnn_windows, 300])
+                test_q_slice = tf.slice(test_q_highway, [0, i, 0], [-1, self.rnn_windows, 300])
+                test_a_slice = tf.slice(test_a_highway, [0, i, 0], [-1, self.rnn_windows, 300])
+
+                if i>0:
+                    tf.get_variable_scope().reuse
+                with tf.variable_scope("LSTM_scope3", reuse=None):
+                    ori_q_slice_fea = bilstm(ori_q_slice, self.rnn_size)
+                with tf.variabel_scope("LSTM_scope4", reuse=True):
+                    cand_a_slice_fea = bilstm((cand_a_slice, self.rnn_size))
+                    neg_a_slice_fea = bilstm(neg_a_slice, self.rnn_size)
+                    test_q_slice_fea = bilstm(test_q_slice, self.rnn_size)
+                    test_a_slice_fea = bilstm(test_a_slice, self.rnn_size)
+                print(ori_q_slice_fea.shape)
+                ori_q_f, cand_a_f = get_feature(ori_q_slice_fea, cand_a_slice_fea)
+                _, neg_a_f = get_feature(ori_q_slice_fea, neg_a_slice_fea)
+                test_q_f, test_a_f = get_feature(test_q_slice_fea, test_a_slice_fea)
+                print ('model 6 ori_q_fea.shape:', ori_q_f.shape)
+                ori_q_list.append(ori_q_f)
+                cand_a_list.append(cand_a_f)
+                neg_a_list.append(neg_a_f)
+                test_q_list.append(test_q_f)
+                test_a_list.append(test_a_f)
+
+            ori_q_feat = tf.transpose(ori_q_list, perm=[1, 0, 2])
+            cand_a_feat = tf.transpose(cand_a_list, perm=[1, 0, 2])
+            neg_a_feat = tf.transpose(neg_a_list, perm=[1, 0, 2])
+            test_q_feat = tf.transpose(test_q_list, perm=[1, 0, 2])
+            test_a_feat = tf.transpose(test_a_list, perm=[1, 0, 2])
+            ori_q_fea, cand_a_fea = get_feature(ori_q_feat, cand_a_feat)
+            _, neg_a_fea = get_feature(ori_q_feat, neg_a_feat)
+            test_q_fea, test_a_fea = get_feature(test_q_feat, test_a_feat)
+
+        self.ori_q_fea = ori_q_fea
+        self.ori_cand = feature2cos(ori_q_fea, cand_a_feat)
+        self.ori_neg = feature2cos(ori_q_fea, neg_a_fea)
+        self.loss, self.acc = cal_loss_and_acc(self.ori_cand, self.ori_neg)
+
+        self.test_q_a = feature2cos(test_q_fea, test_a_fea)
+
+    def assign_new_lr(self, session, lr_value):
+        session.run(self.lr_update, feed_dict={self.new_lr:lr_value} )
+
 
