@@ -205,7 +205,7 @@ class LSTM_QA(object):
                 test_q_fea, test_a_fea = get_feature(test_q_highway, test_a_highway)
                 self.ori_q_fea = tf.reshape(ori_q_fea, [-1, 300], name='ori_q_feature')
 
-        if self.mode_choice == 6:
+        if self.mode_choice == 6: ##model 5 - attention + window + maxpooling
             ori_q_concat = tf.concat([ori_q, ori_que], 2)
             cand_a_concat = tf.concat([cand_a, cand_que], 2)
             neg_a_concat = tf.concat([neg_a, neg_que], 2)
@@ -267,6 +267,6 @@ class LSTM_QA(object):
         self.test_q_a = feature2cos(test_q_fea, test_a_fea)
 
     def assign_new_lr(self, session, lr_value):
-        session.run(self.lr_update, feed_dict={self.new_lr:lr_value} )
+        session.run(self.lr_update, feed_dict={self.new_lr:lr_value})
 
 
